@@ -1,0 +1,1570 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>06｜麥克風音量互動模擬器</title>
+
+<style>
+:root{
+  font-family:system-ui,"Microsoft JhengHei",sans-serif;
+  color:#203e46;
+  background:#f4f2ec;
+  line-height:1.65
+}
+*{box-sizing:border-box}
+body{margin:0}
+main{max-width:1350px;margin:auto;padding:24px}
+h1{font-size:clamp(25px,4vw,36px);margin:4px 0}
+h2{font-size:20px;margin:0 0 12px}
+h3{font-size:16px;margin:18px 0 8px}
+p{margin:7px 0}
+.small,small{font-size:13px;color:#526b70}
+.eyebrow{font-size:12px;letter-spacing:.12em;color:#526b70}
+
+.layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 350px;
+  gap:20px;
+  align-items:start;
+  margin-top:20px
+}
+
+.panel{
+  background:white;
+  border:1px solid #ccd9d4;
+  border-radius:16px;
+  padding:22px;
+  min-width:0
+}
+
+.game{
+  position:sticky;
+  top:18px;
+  overflow:hidden;
+  border-radius:18px;
+  border:1px solid #ccd9d4;
+  background:#edf2ea;
+  min-width:0
+}
+
+.game svg{
+  display:block;
+  width:100%;
+  height:auto
+}
+
+.caption{
+  background:white;
+  padding:14px 18px;
+  font-size:15px
+}
+
+.buttons{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:14px 0
+}
+
+button,select{
+  font:inherit;
+  border:1px solid #286a5c;
+  border-radius:8px;
+  padding:8px 12px
+}
+
+button{
+  background:#286a5c;
+  color:white;
+  cursor:pointer
+}
+
+button.secondary,select{
+  background:white;
+  color:#203e46
+}
+
+select{width:100%}
+
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed
+}
+
+:focus-visible{
+  outline:3px solid #a65d22;
+  outline-offset:4px
+}
+
+label{
+  display:block;
+  font-size:14px;
+  font-weight:bold;
+  margin-top:13px
+}
+
+input[type=range]{
+  width:100%;
+  accent-color:#286a5c
+}
+
+output{float:right}
+input:disabled{opacity:.45}
+
+.reading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between
+}
+
+.reading strong{font-size:34px}
+
+.meter{
+  height:22px;
+  background:#e4ebe7;
+  border-radius:5px;
+  position:relative;
+  margin:10px 0 6px
+}
+
+.fill{
+  height:100%;
+  width:0;
+  background:#5f9885;
+  border-radius:5px
+}
+
+.marker{
+  position:absolute;
+  top:-3px;
+  height:28px;
+  border-left:3px solid #344e70
+}
+
+.marker.loud{border-color:#a25732}
+
+.legend{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:15px 0
+}
+
+.stats div{
+  padding:8px 10px;
+  background:#edf3ef;
+  border-radius:8px;
+  font-size:12px
+}
+
+.stats strong{
+  display:block;
+  font-size:16px
+}
+
+.inputbox{
+  padding:12px;
+  background:#f0f4f0;
+  border-radius:10px;
+  margin:12px 0
+}
+
+.mic-box{
+  padding:12px;
+  background:#e9f2ee;
+  border:1px solid #c7dbd3;
+  border-radius:10px;
+  margin-bottom:14px
+}
+
+.mic-status{
+  margin:8px 0 0;
+  font-size:13px;
+  color:#526b70
+}
+
+.active-key{
+  color:#286a5c;
+  font-weight:bold
+}
+
+details{margin-top:18px}
+summary{font-weight:bold;cursor:pointer}
+li{margin:7px 0}
+
+.log{
+  font-size:13px;
+  min-height:40px;
+  padding-left:20px
+}
+
+footer{
+  margin-top:20px;
+  font-size:13px;
+  color:#526b70
+}
+
+/* 遊戲模式 */
+body.play .debug-only{
+  display:none!important
+}
+
+body.play .layout{
+  grid-template-columns:1fr;
+  margin-top:0
+}
+
+body.play .game{
+  position:static;
+  max-width:1100px;
+  width:100%;
+  margin:auto
+}
+
+body.play .game svg{
+  max-height:85vh
+}
+
+body.play main{
+  max-width:1150px
+}
+
+[hidden]{display:none!important}
+
+@media(max-width:950px){
+  .layout{grid-template-columns:1fr}
+  .game{position:static}
+  main{padding:18px 14px}
+}
+</style>
+</head>
+
+<body>
+<main>
+
+<header class="debug-only">
+  <p class="eyebrow">互動教具 · 第四週 · 範例 06</p>
+  <h1>麥克風音量互動模擬器</h1>
+  <p>
+    可使用真實麥克風、鍵盤模擬或滑桿控制音量。
+    空白鍵可以在「除錯模式」與「遊戲模式」之間切換。
+  </p>
+  <p class="small">
+    麥克風模式需要瀏覽器授權。建議使用 Chrome，並透過 HTTPS 或 Google Apps Script 網頁部署開啟。
+  </p>
+</header>
+
+<div class="layout">
+
+<section class="game" id="game" tabindex="0"
+  aria-label="聲音互動遊戲，真實麥克風音量可以驅動方塊">
+
+<svg viewBox="0 0 1000 650" role="img"
+  aria-label="方塊受到聲音音量支撐，突然增加的聲音會讓方塊換色">
+
+<defs>
+  <linearGradient id="sky" x2="0" y2="1">
+    <stop stop-color="#e3ede8"/>
+    <stop offset="1" stop-color="#f7f3e9"/>
+  </linearGradient>
+</defs>
+
+<rect width="1000" height="650" fill="url(#sky)"/>
+<circle cx="840" cy="100" r="45" fill="#e7d8b4"/>
+<path d="M0 520 Q200 440 390 510 T760 490 T1000 510 V650 H0Z"
+  fill="#d8e4d8"/>
+
+<g class="debug-only">
+  <line x1="500" x2="500" y1="30" y2="580"
+    stroke="#89a697" stroke-dasharray="6 10"/>
+  <text x="25" y="45" fill="#526b70" font-size="19">
+    聲音輸入 → 音量判斷 → 浮力／換色
+  </text>
+</g>
+
+<rect y="580" width="1000" height="70" fill="#c3cdbb"/>
+<line x1="0" x2="1000" y1="580" y2="580"
+  stroke="#6d8c75" stroke-width="4"/>
+
+<ellipse id="shadow" cx="500" cy="583"
+  rx="45" ry="9" fill="#3f6051" opacity=".18"/>
+
+<g id="cube" transform="translate(500 170)">
+  <rect id="cubeColor" x="-38" y="-38" width="76" height="76"
+    rx="7" fill="#397866"/>
+  <path d="M-18 12 L0 -16 L18 12 M0 -14 V22"
+    fill="none" stroke="white" stroke-width="5"
+    stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+
+<text id="feedback" x="500" y="95"
+  text-anchor="middle" font-size="25" fill="#2c5d50">
+  請先啟用麥克風或按住 ↑
+</text>
+
+<text id="sceneHint" x="500" y="623"
+  text-anchor="middle" font-size="19" fill="#3e5c47">
+  除錯模式：可選擇麥克風、鍵盤模擬或滑桿
+</text>
+
+</svg>
+
+<p class="caption" id="gameState">
+  請選擇輸入方式。空白鍵可以切換遊戲／除錯模式。
+</p>
+
+</section>
+
+<!-- 除錯控制台 -->
+<aside class="panel debug-only" id="debug">
+
+<h2>除錯控制台</h2>
+
+<label for="inputMode">輸入方式</label>
+<select id="inputMode">
+  <option value="keyboard">鍵盤模擬：按住 ↑／W 模擬麥克風</option>
+  <option value="microphone">麥克風：真實即時音量</option>
+  <option value="slider">滑桿：手動指定持續音量</option>
+</select>
+
+<div class="inputbox">
+
+<!-- 麥克風 -->
+<div id="micControls" class="mic-box">
+  <strong>🎤 真實麥克風</strong>
+
+  <div class="buttons">
+    <button id="micStart" type="button">啟用麥克風</button>
+    <button id="micStop" type="button" class="secondary" disabled>
+      停止收音
+    </button>
+  </div>
+
+  <p id="micStatus" class="mic-status" aria-live="polite">
+    尚未啟用麥克風。
+  </p>
+</div>
+
+<label for="keyVolume">
+  ↑／W 模擬時的最大音量
+  <output id="keyVolumeValue">65</output>
+</label>
+
+<input id="keyVolume" type="range"
+  min="0" max="100" value="65">
+
+<div id="keyboardHelp" class="mic-box">
+  <strong>⌨️ 鍵盤模擬麥克風</strong>
+  <p class="small">按住 <b>↑</b> 或 <b>W</b>，模擬音量會逐漸上升；放開後會逐漸下降。</p>
+</div>
+
+<p id="keyState" class="small">
+  鍵盤尚未按下。可按住 ↑ 或 W 模擬聲音。
+</p>
+
+<label for="simVolume">
+  滑桿模擬音量
+  <output id="simVolumeValue">0</output>
+</label>
+
+<input id="simVolume" type="range"
+  min="0" max="100" value="0">
+
+<small>
+  麥克風模式：直接使用真實收音音量。
+  鍵盤模擬模式：按住 ↑ 或 W 產生模擬音量。
+  滑桿模式：由滑桿維持指定音量。
+</small>
+
+</div>
+
+<div class="buttons">
+  <button id="pulse">短促一下（0.2 秒）</button>
+  <button id="silence" class="secondary">立刻安靜</button>
+  <button id="restart" class="secondary">重新遊玩</button>
+</div>
+
+<div class="reading">
+  <span>目前輸入音量</span>
+  <span><strong id="raw">0</strong>／100</span>
+</div>
+
+<div class="meter" id="meter"
+  role="meter"
+  aria-label="目前音量"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-valuenow="0">
+
+  <div id="fill" class="fill"></div>
+  <span class="marker" id="quietLine"></span>
+  <span class="marker loud" id="soundLine"></span>
+
+</div>
+
+<div class="legend">
+  <span id="quietLegend"></span>
+  <span id="soundLegend"></span>
+</div>
+
+<div class="stats">
+  <div>發聲狀態<strong id="gateState">安靜</strong></div>
+  <div>平滑後音量<strong id="smooth">0</strong></div>
+  <div>短時間增幅<strong id="rise">0</strong></div>
+  <div>向上力量<strong id="force">0</strong></div>
+  <div>換色次數<strong id="count">0</strong></div>
+  <div>事件狀態<strong id="eventState">等待穩定</strong></div>
+</div>
+
+<h2>互動參數</h2>
+
+<label for="quiet">
+  安靜門檻
+  <output id="quietValue"></output>
+</label>
+<input id="quiet" type="range"
+  min="0" max="90" value="20">
+
+<label for="sound">
+  發聲門檻
+  <output id="soundValue"></output>
+</label>
+<input id="sound" type="range"
+  min="5" max="100" value="40">
+
+<label for="gravity">
+  重力
+  <output id="gravityValue"></output>
+</label>
+<input id="gravity" type="range"
+  min="30" max="350" step="10" value="120">
+
+<label for="lift">
+  基本浮力
+  <output id="liftValue"></output>
+</label>
+<input id="lift" type="range"
+  min="50" max="600" step="10" value="240">
+
+<label for="sensitivity">
+  敏感度
+  <output id="sensitivityValue"></output>
+</label>
+<input id="sensitivity" type="range"
+  min="0.2" max="2.5" step="0.1" value="1">
+
+<label for="burst">
+  突然聲響增幅
+  <output id="burstValue"></output>
+</label>
+<input id="burst" type="range"
+  min="5" max="40" value="12">
+
+<button id="defaults" class="secondary" style="margin-top:14px">
+  還原互動參數
+</button>
+
+<h3>最近的換色事件</h3>
+<ol class="log" id="log">
+  <li>尚未觸發事件。</li>
+</ol>
+
+<details>
+  <summary>操作說明</summary>
+  <ol class="small">
+    <li>
+      選擇「麥克風」，按下「啟用麥克風」，允許瀏覽器使用麥克風。
+    </li>
+    <li>
+      對著麥克風說話、拍手或發出聲音，方塊會依照真實音量產生浮力。
+    </li>
+    <li>
+      按下空白鍵可以進入遊戲模式，再按一次空白鍵可返回除錯模式。
+    </li>
+    <li>
+      鍵盤模擬模式可以按住 ↑ 或 W 來測試，不需要麥克風。
+    </li>
+  </ol>
+</details>
+
+<details>
+  <summary>注意事項</summary>
+  <p class="small">
+    麥克風資料只在瀏覽器內進行即時音量分析。
+    本程式不會把麥克風錄音上傳到伺服器，也不會保存錄音檔。
+  </p>
+  <p class="small">
+    Chrome／Edge 通常需要 HTTPS 或 localhost 才能使用
+    getUserMedia 麥克風功能。
+  </p>
+</details>
+
+</aside>
+</div>
+
+<footer class="debug-only">
+  真實麥克風模式使用 Web Audio API 分析即時音量。
+  重新整理頁面會回到預設狀態。
+</footer>
+
+<script>
+'use strict';
+
+/* =========================
+   基本工具
+========================= */
+
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+
+const defaults = {
+  quiet: 20,
+  sound: 40,
+  gravity: 120,
+  lift: 240,
+  sensitivity: 1,
+  burst: 12
+};
+
+/* =========================
+   聲音判斷
+========================= */
+
+class VoiceControl {
+
+  constructor(){
+    this.reset();
+  }
+
+  reset(){
+    this.sounding = false;
+    this.smoothed = null;
+    this.history = [];
+    this.last = null;
+    this.cooldown = -Infinity;
+    this.burstReady = false;
+    this.settledSince = null;
+  }
+
+  tick(raw, t, p){
+
+    if(this.last !== null && t - this.last > 250){
+      this.reset();
+    }
+
+    const dt =
+      this.last === null
+        ? 0
+        : Math.max(0, (t - this.last) / 1000);
+
+    this.last = t;
+
+    /* 音量平滑 */
+    this.smoothed =
+      this.smoothed === null
+        ? raw
+        : this.smoothed +
+          (raw - this.smoothed) *
+          (1 - Math.exp(-dt / 0.065));
+
+    this.history.push({
+      t,
+      v: raw
+    });
+
+    while(
+      this.history.length > 1 &&
+      this.history[1].t <= t - 100
+    ){
+      this.history.shift();
+    }
+
+    const base = this.history[0];
+
+    const readyWindow =
+      t - base.t >= 80;
+
+    const rise =
+      readyWindow
+        ? raw - base.v
+        : 0;
+
+    /* 雙門檻 */
+    if(this.smoothed >= p.sound){
+      this.sounding = true;
+    }else if(this.smoothed < p.quiet){
+      this.sounding = false;
+    }
+
+    /* 判斷是否已經安靜一小段時間 */
+    if(rise < p.burst * 0.3){
+
+      if(this.settledSince === null){
+        this.settledSince = t;
+      }
+
+      if(t - this.settledSince >= 150){
+        this.burstReady = true;
+      }
+
+    }else{
+      this.settledSince = null;
+    }
+
+    /* 突然增加的聲音 */
+    let event = false;
+
+    if(
+      readyWindow &&
+      this.burstReady &&
+      raw >= p.sound &&
+      rise >= p.burst &&
+      t - this.cooldown >= 600
+    ){
+      event = true;
+      this.cooldown = t;
+      this.burstReady = false;
+      this.settledSince = null;
+    }
+
+    const intensity =
+      this.sounding
+        ? clamp(
+            (this.smoothed - p.quiet) /
+            Math.max(5, p.sound - p.quiet),
+            0,
+            2
+          )
+        : 0;
+
+    return {
+      volume: this.smoothed,
+      rise,
+      event,
+      sounding: this.sounding,
+      force:
+        p.lift *
+        p.sensitivity *
+        intensity,
+
+      eventState:
+        t - this.cooldown < 600
+          ? '冷卻中'
+          : this.burstReady
+            ? '等待突然增幅'
+            : '等待音量穩定'
+    };
+  }
+}
+
+/* =========================
+   方塊物理
+========================= */
+
+function physics(body, dt, force, p){
+
+  body.angle += body.spin * dt;
+
+  const angle =
+    body.angle * Math.PI / 180;
+
+  const extent =
+    38 *
+    (
+      Math.abs(Math.sin(angle)) +
+      Math.abs(Math.cos(angle))
+    );
+
+  body.velocity =
+    clamp(
+      (
+        body.velocity +
+        (force - p.gravity) * dt
+      ) *
+      Math.exp(-0.65 * dt),
+      -400,
+      400
+    );
+
+  body.height +=
+    body.velocity * dt;
+
+  if(body.height < extent){
+
+    body.height = extent;
+
+    if(body.velocity < 0){
+      body.velocity = 0;
+    }
+  }
+
+  if(body.height > 550 - extent){
+
+    body.height = 550 - extent;
+
+    if(body.velocity > 0){
+      body.velocity = 0;
+    }
+  }
+
+  return extent;
+}
+
+/* =========================
+   DOM
+========================= */
+
+const $ = id => document.getElementById(id);
+
+const params = {
+  ...defaults
+};
+
+const voice = new VoiceControl();
+
+const colors = [
+  '#397866',
+  '#4b7796',
+  '#a16a40',
+  '#865e8b',
+  '#b15c62',
+  '#637d43'
+];
+
+const body = {
+  height:410,
+  velocity:0,
+  angle:0,
+  spin:35
+};
+
+/* =========================
+   狀態
+========================= */
+
+let held = false;
+let keySimLevel = 0;
+let pulseUntil = 0;
+
+let debug = true;
+
+let lastFrame = null;
+let lastUi = 0;
+
+let nextSpin = 0;
+
+let colorIndex = 0;
+let count = 0;
+
+let flashUntil = 0;
+
+/* =========================
+   真實麥克風
+========================= */
+
+let micStream = null;
+let micContext = null;
+let micAnalyser = null;
+let micData = null;
+
+let micLevel = 0;
+let micRunning = false;
+
+/*
+  將麥克風 RMS 音量轉成 0～100。
+  multiplier 可以依照不同麥克風再調整。
+*/
+const MIC_MULTIPLIER = 500;
+
+async function startMicrophone(){
+
+  if(!navigator.mediaDevices ||
+     !navigator.mediaDevices.getUserMedia){
+
+    $('micStatus').textContent =
+      '此瀏覽器不支援麥克風，或目前頁面不是安全來源（HTTPS）。';
+
+    return;
+  }
+
+  try{
+
+    stopMicrophone();
+
+    micStream =
+      await navigator.mediaDevices.getUserMedia({
+        audio:{
+          echoCancellation:true,
+          noiseSuppression:true,
+          autoGainControl:true
+        }
+      });
+
+    micContext =
+      new (
+        window.AudioContext ||
+        window.webkitAudioContext
+      )();
+
+    if(micContext.state === 'suspended'){
+      await micContext.resume();
+    }
+
+    micAnalyser =
+      micContext.createAnalyser();
+
+    micAnalyser.fftSize = 1024;
+    micAnalyser.smoothingTimeConstant = 0.05;
+
+    micData =
+      new Uint8Array(
+        micAnalyser.fftSize
+      );
+
+    const source =
+      micContext.createMediaStreamSource(
+        micStream
+      );
+
+    source.connect(micAnalyser);
+
+    micRunning = true;
+
+    $('micStart').disabled = true;
+    $('micStop').disabled = false;
+
+    $('micStatus').textContent =
+      '✅ 麥克風已啟用，現在可以說話、拍手或發出聲音。';
+
+  }catch(error){
+
+    console.error(error);
+
+    micRunning = false;
+    micLevel = 0;
+
+    $('micStart').disabled = false;
+    $('micStop').disabled = true;
+
+    $('micStatus').textContent =
+      '❌ 麥克風啟用失敗。請允許瀏覽器使用麥克風，並確認使用 HTTPS。';
+  }
+}
+
+function stopMicrophone(){
+
+  if(micStream){
+
+    micStream
+      .getTracks()
+      .forEach(track => track.stop());
+
+  }
+
+  if(micContext){
+
+    micContext.close()
+      .catch(() => {});
+
+  }
+
+  micStream = null;
+  micContext = null;
+  micAnalyser = null;
+  micData = null;
+
+  micLevel = 0;
+  micRunning = false;
+
+  if($('micStart')){
+    $('micStart').disabled = false;
+  }
+
+  if($('micStop')){
+    $('micStop').disabled = true;
+  }
+}
+
+/* 每一幀讀取真實麥克風音量 */
+
+function updateMicrophoneLevel(){
+
+  if(!micAnalyser || !micData){
+
+    micLevel = 0;
+    return;
+  }
+
+  micAnalyser.getByteTimeDomainData(
+    micData
+  );
+
+  let sum = 0;
+
+  for(let i=0; i<micData.length; i++){
+
+    const sample =
+      (micData[i] - 128) / 128;
+
+    sum += sample * sample;
+  }
+
+  const rms =
+    Math.sqrt(
+      sum / micData.length
+    );
+
+  /*
+    RMS 通常很小，所以乘上倍率。
+    最後限制在 0～100。
+  */
+  micLevel =
+    clamp(
+      Math.round(
+        rms * MIC_MULTIPLIER
+      ),
+      0,
+      100
+    );
+}
+
+/* =========================
+   輸入
+========================= */
+
+function inputLevel(t){
+
+  const mode =
+    $('inputMode').value;
+
+  let base = 0;
+
+  if(mode === 'microphone'){
+
+    base = micLevel;
+
+  }else if(mode === 'keyboard'){
+
+    /*
+      鍵盤模擬麥克風：
+      按住 ↑ / W 時音量逐漸增加，
+      放開後逐漸下降，讓操作更接近真實收音。
+    */
+    const target =
+      held ? +$('keyVolume').value : 0;
+
+    const speed =
+      held ? 0.22 : 0.14;
+
+    keySimLevel +=
+      (target - keySimLevel) * speed;
+
+    if(Math.abs(keySimLevel - target) < 0.15){
+      keySimLevel = target;
+    }
+
+    base = keySimLevel;
+
+  }else{
+
+    base =
+      +$('simVolume').value;
+  }
+
+  if(t < pulseUntil){
+
+    base = Math.max(
+      base,
+      +$('keyVolume').value
+    );
+  }
+
+  return clamp(base, 0, 100);
+}
+
+function silence(){
+
+  held = false;
+  keySimLevel = 0;
+  pulseUntil = 0;
+
+  $('simVolume').value = 0;
+  $('simVolumeValue').textContent = '0';
+}
+
+function configure(changed){
+
+  let q = +$('quiet').value;
+  let s = +$('sound').value;
+
+  if(s - q < 5){
+
+    if(changed === 'sound'){
+      q = s - 5;
+    }else{
+      s = q + 5;
+    }
+  }
+
+  $('quiet').value = q;
+  $('sound').value = s;
+
+  for(const k of Object.keys(defaults)){
+
+    params[k] = +$(k).value;
+
+    $(k + 'Value').textContent =
+      k === 'sensitivity'
+        ? params[k].toFixed(1) + ' 倍'
+        : params[k];
+  }
+
+  $('quietLine').style.left =
+    q + '%';
+
+  $('soundLine').style.left =
+    s + '%';
+
+  $('quietLegend').textContent =
+    '安靜 ' + q;
+
+  $('soundLegend').textContent =
+    '發聲 ' + s;
+
+  if(
+    ['quiet','sound','burst']
+      .includes(changed)
+  ){
+    voice.reset();
+  }
+}
+
+function changeColor(t){
+
+  colorIndex =
+    (
+      colorIndex +
+      1 +
+      Math.floor(
+        Math.random() *
+        (colors.length - 1)
+      )
+    ) % colors.length;
+
+  $('cubeColor')
+    .setAttribute(
+      'fill',
+      colors[colorIndex]
+    );
+
+  count++;
+
+  flashUntil =
+    t + 900;
+
+  if(count === 1){
+    $('log').replaceChildren();
+  }
+
+  const li =
+    document.createElement('li');
+
+  li.textContent =
+    new Date().toLocaleTimeString(
+      'zh-TW',
+      {
+        hour12:false
+      }
+    ) +
+    '　突然聲響 → 方塊換色';
+
+  $('log').prepend(li);
+
+  while(
+    $('log').children.length > 5
+  ){
+    $('log').lastElementChild.remove();
+  }
+}
+
+/* =========================
+   動畫主迴圈
+========================= */
+
+function frame(t){
+
+  /* 先更新真實麥克風音量 */
+  if(
+    $('inputMode').value === 'microphone' &&
+    micRunning
+  ){
+    updateMicrophoneLevel();
+  }else if(
+    $('inputMode').value !== 'microphone'
+  ){
+    micLevel = 0;
+  }
+
+  const dt =
+    lastFrame === null
+      ? 0
+      : clamp(
+          (t - lastFrame) / 1000,
+          0,
+          0.05
+        );
+
+  lastFrame = t;
+
+  const raw =
+    inputLevel(t);
+
+  const result =
+    voice.tick(
+      raw,
+      t,
+      params
+    );
+
+  if(result.event){
+    changeColor(t);
+  }
+
+  if(t >= nextSpin){
+
+    body.spin =
+      (Math.random() < .5 ? -1 : 1) *
+      (18 + Math.random() * 55);
+
+    nextSpin =
+      t +
+      1800 +
+      Math.random() * 1800;
+  }
+
+  const extent =
+    physics(
+      body,
+      dt,
+      result.force,
+      params
+    );
+
+  $('cube').setAttribute(
+    'transform',
+    'translate(500 ' +
+    (580 - body.height).toFixed(2) +
+    ') rotate(' +
+    body.angle.toFixed(2) +
+    ')'
+  );
+
+  $('shadow').setAttribute(
+    'rx',
+    String(
+      50 - body.height / 550 * 23
+    )
+  );
+
+  /* 遊戲畫面提示 */
+
+  if(t < flashUntil){
+
+    $('feedback').textContent =
+      '突然增幅！方塊換色！';
+
+  }else if(result.sounding){
+
+    $('feedback').textContent =
+      $('inputMode').value === 'microphone'
+        ? '真實聲音正在托住方塊'
+        : '聲音正在托住方塊';
+
+  }else{
+
+    $('feedback').textContent =
+      $('inputMode').value === 'microphone'
+        ? '請說話或發出聲音'
+        : '等待聲音輸入';
+  }
+
+  if(body.height <= extent + .5){
+
+    $('gameState').textContent =
+      '方塊落地了';
+
+  }else if(body.velocity > 8){
+
+    $('gameState').textContent =
+      '方塊正在上升';
+
+  }else if(body.velocity < -8){
+
+    $('gameState').textContent =
+      '方塊正在下降';
+
+  }else{
+
+    $('gameState').textContent =
+      '方塊暫時停在半空中';
+  }
+
+  /* 除錯面板 */
+  if(
+    debug &&
+    t - lastUi >= 80
+  ){
+
+    lastUi = t;
+
+    $('raw').textContent =
+      Math.round(raw);
+
+    $('fill').style.width =
+      raw + '%';
+
+    $('meter').setAttribute(
+      'aria-valuenow',
+      String(Math.round(raw))
+    );
+
+    $('smooth').textContent =
+      result.volume.toFixed(1);
+
+    $('rise').textContent =
+      result.rise.toFixed(1);
+
+    $('force').textContent =
+      Math.round(result.force);
+
+    $('gateState').textContent =
+      result.sounding
+        ? '發聲／浮力開啟'
+        : '安靜／浮力關閉';
+
+    $('count').textContent =
+      count;
+
+    $('eventState').textContent =
+      result.eventState;
+
+    $('keyState').textContent =
+      held
+        ? '↑ 按住中'
+        : '按住 ↑ 或 W 模擬聲音。';
+  }
+
+  requestAnimationFrame(frame);
+}
+
+/* =========================
+   空白鍵：除錯／遊戲模式
+========================= */
+
+function toggleDebugMode(){
+
+  debug = !debug;
+
+  document.body.classList.toggle(
+    'play',
+    !debug
+  );
+
+  $('debug').hidden =
+    !debug;
+
+  /*
+    避免空白鍵焦點停在按鈕上造成額外 click
+  */
+  $('game').focus({
+    preventScroll:true
+  });
+}
+
+document.addEventListener(
+  'keydown',
+  event => {
+
+    /*
+      不攔截輸入文字時的空白鍵。
+      但 range/select/button 不會阻止模式切換。
+    */
+    if(
+      event.isComposing ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.metaKey ||
+      event.shiftKey
+    ){
+      return;
+    }
+
+    if(event.code === 'Space'){
+
+      if(
+        event.target instanceof Element &&
+        (
+          event.target.tagName === 'TEXTAREA' ||
+          event.target.isContentEditable
+        )
+      ){
+        return;
+      }
+
+      event.preventDefault();
+
+      if(event.repeat){
+        return;
+      }
+
+      toggleDebugMode();
+
+    }else if(
+      (event.code === 'ArrowUp' || event.code === 'KeyW') &&
+      $('inputMode').value === 'keyboard'
+    ){
+
+      event.preventDefault();
+      held = true;
+    }
+  }
+);
+
+document.addEventListener(
+  'keyup',
+  event => {
+
+    if(event.code === 'ArrowUp' || event.code === 'KeyW'){
+      held = false;
+    }
+  }
+);
+
+/* 點擊遊戲區域後取得焦點 */
+$('game').addEventListener(
+  'click',
+  () => {
+    $('game').focus({
+      preventScroll:true
+    });
+  }
+);
+
+/* =========================
+   輸入模式切換
+========================= */
+
+$('inputMode').addEventListener(
+  'change',
+  async () => {
+
+    silence();
+    voice.reset();
+
+    const mode =
+      $('inputMode').value;
+
+    const keyboard =
+      mode === 'keyboard';
+
+    $('simVolume').disabled =
+      keyboard || mode === 'microphone';
+
+    $('micControls').hidden =
+      mode !== 'microphone';
+
+    if(mode === 'microphone'){
+
+      $('keyboardHelp').hidden = true;
+
+      $('sceneHint').textContent =
+        '麥克風即時收音中 · 請自然說話或發出聲音';
+
+      /*
+        使用者親自選擇麥克風模式，
+        此 change 事件通常已經由使用者操作觸發，
+        因此直接要求麥克風權限。
+      */
+      await startMicrophone();
+
+    }else{
+
+      stopMicrophone();
+
+      $('keyboardHelp').hidden =
+        mode !== 'keyboard';
+
+      if(mode === 'keyboard'){
+
+        $('sceneHint').textContent =
+          '按住 ↑ 或 W 模擬麥克風 · 放開恢復安靜';
+
+      }else{
+
+        $('keyboardHelp').hidden = true;
+        $('sceneHint').textContent =
+          '由滑桿維持模擬音量';
+      }
+    }
+  }
+);
+
+/* =========================
+   麥克風按鈕
+========================= */
+
+$('micStart').addEventListener(
+  'click',
+  startMicrophone
+);
+
+$('micStop').addEventListener(
+  'click',
+  () => {
+
+    stopMicrophone();
+
+    voice.reset();
+
+    $('micStatus').textContent =
+      '麥克風已停止。';
+
+  }
+);
+
+/* =========================
+   其他控制
+========================= */
+
+$('keyVolume').addEventListener(
+  'input',
+  () => {
+    $('keyVolumeValue').textContent =
+      $('keyVolume').value;
+  }
+);
+
+$('simVolume').addEventListener(
+  'input',
+  () => {
+    $('simVolumeValue').textContent =
+      $('simVolume').value;
+  }
+);
+
+$('pulse').addEventListener(
+  'click',
+  () => {
+    pulseUntil =
+      performance.now() + 200;
+  }
+);
+
+$('silence').addEventListener(
+  'click',
+  silence
+);
+
+for(
+  const k of Object.keys(defaults)
+){
+
+  $(k).addEventListener(
+    'input',
+    () => configure(k)
+  );
+}
+
+$('defaults').addEventListener(
+  'click',
+  () => {
+
+    for(
+      const k of Object.keys(defaults)
+    ){
+      $(k).value =
+        defaults[k];
+    }
+
+    configure('sound');
+  }
+);
+
+$('restart').addEventListener(
+  'click',
+  () => {
+
+    silence();
+
+    voice.reset();
+
+    body.height = 410;
+    body.velocity = 0;
+    body.angle = 0;
+
+    count = 0;
+    flashUntil = 0;
+
+    $('log').replaceChildren();
+
+    const li =
+      document.createElement('li');
+
+    li.textContent =
+      '尚未觸發事件。';
+
+    $('log').append(li);
+  }
+);
+
+/* =========================
+   防止卡住
+========================= */
+
+window.addEventListener(
+  'blur',
+  () => {
+
+    silence();
+    voice.reset();
+  }
+);
+
+document.addEventListener(
+  'visibilitychange',
+  () => {
+
+    if(document.hidden){
+
+      silence();
+      voice.reset();
+      lastFrame = null;
+    }
+  }
+);
+
+/* =========================
+   初始化
+========================= */
+
+$('simVolume').disabled = true;
+$('micControls').hidden = true;
+$('keyboardHelp').hidden = false;
+
+$('sceneHint').textContent =
+  '按住 ↑ 或 W 模擬麥克風 · 放開恢復安靜';
+
+configure();
+requestAnimationFrame(frame);
+
+</script>
+
+</main>
+</body>
+</html>
